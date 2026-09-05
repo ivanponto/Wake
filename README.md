@@ -42,7 +42,7 @@ Your agent history is scattered across `~/.claude`, `~/.codex`, and a dozen othe
 | Oh My Pi | `~/.omp/agent/sessions/**/*.jsonl` | ✅ | — |
 | Grok Build | `~/.grok/sessions/**/updates.jsonl` | ✅ | — |
 | Kimi Code | `~/.kimi-code/sessions/**/wire.jsonl` | — | — |
-| Antigravity CLI | `~/.gemini/antigravity-cli/conversation_summaries.db` (metadata only — transcripts are encrypted) | — | — |
+| Antigravity | `~/.gemini/antigravity-ide/brain/**/transcript.jsonl` (full transcripts; CLI fallback) | ✅ | — |
 | DeepSeek Harness (`dsh`) | `~/.dsh/sessions/**/session.jsonl[.zstd]` (zstd-compressed logs are decoded transparently) | ✅ | — |
 | Hermes Agent | `~/.hermes/state.db` + `profiles/*/state.db` (`HERMES_HOME` is respected) | ✅ | ✅ |
 | OpenClaw | `~/.openclaw/agents/*/agent/openclaw-agent.sqlite` + legacy `agents/*/sessions/*.jsonl` (`OPENCLAW_STATE_DIR` is respected) | ✅ | ✅ |

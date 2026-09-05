@@ -1156,6 +1156,86 @@ fn antigravity_parse_contract() {
     assert!(s.units[0].text.contains("QR overlay polish"));
 }
 
+#[test]
+fn antigravity_ide_parse_contract() {
+    let _env = setup();
+    let fixture_dir = fixture("antigravity/brain");
+    let adapter = AntigravityAdapter::new().with_custom_root(fixture_dir.clone());
+
+    let refs = adapter.list_session_files().expect("antigravity ide list");
+    assert_eq!(refs.len(), 1);
+    assert_eq!(refs[0].native_id, "ag-ide-0001");
+    assert!(refs[0].file_path.ends_with("transcript.jsonl"));
+
+    let s = adapter.parse_session(&refs[0]).expect("parse_session");
+    let t = adapter.parse_transcript(&refs[0]).expect("parse_transcript");
+
+    assert_eq!(s.meta.title, "Fix the button layout on the dashboard");
+    assert_eq!(s.meta.project_path, "/Users/tester/Github/wakefx");
+    assert_eq!(s.meta.project_name, "wakefx");
+    assert_eq!(s.meta.model.as_deref(), Some("Gemini 3.7 Flash (High)"));
+    assert_eq!(s.meta.message_count, 5); // 2 user + 2 assistant + 1 checkpoint
+
+    assert_eq!(t.mainline.len(), 5);
+    assert_eq!(t.mainline[0].role, Role::User);
+    assert_eq!(t.mainline[0].text, "Fix the button layout on the dashboard");
+
+    assert_eq!(t.mainline[1].role, Role::Assistant);
+    assert!(t.mainline[1].thinking.as_ref().unwrap().contains("check the layout structure"));
+    assert_eq!(t.mainline[1].tool_calls.len(), 2);
+    assert_eq!(t.mainline[1].tool_calls[0].name, "view_file");
+    assert_eq!(t.mainline[1].tool_calls[0].output.as_deref(), Some("pub fn render_buttons() {}"));
+    assert_eq!(t.mainline[1].tool_calls[1].name, "run_command");
+    assert_eq!(t.mainline[1].tool_calls[1].output.as_deref(), Some("test result: ok. 5 passed"));
+    assert!(t.mainline[1].text.contains("I have examined the layout"));
+
+    assert_eq!(t.mainline[2].role, Role::System);
+    assert_eq!(t.mainline[2].kind, MessageKind::CompactSummary);
+
+    assert_eq!(t.mainline[3].role, Role::User);
+    assert_eq!(t.mainline[3].text, "Looks good, please commit the changes");
+
+    assert_eq!(t.mainline[4].role, Role::Assistant);
+    assert_eq!(t.mainline[4].text, "Committed successfully.");
+
+    assert_seq_contract(adapter.as_ref(), &refs[0]);
+
+    let fr = adapter.file_ref(Path::new(&refs[0].file_path)).expect("file_ref");
+    assert_eq!(fr.native_id, "ag-ide-0001");
+}
+
+#[test]
+fn antigravity_real_local_brain_smoke() {
+    let adapter = AntigravityAdapter::new();
+    let refs = match adapter.list_session_files() {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+    if refs.is_empty() {
+        return;
+    }
+    let mut parsed_sessions = 0;
+    let mut parsed_transcripts = 0;
+    for r in &refs {
+        if let Ok(s) = adapter.parse_session(r) {
+            assert!(!s.meta.title.is_empty(), "session {} has empty title", r.native_id);
+            parsed_sessions += 1;
+        }
+        if let Ok(t) = adapter.parse_transcript(r) {
+            assert!(!t.mainline.is_empty(), "transcript {} has empty mainline", r.native_id);
+            parsed_transcripts += 1;
+        }
+    }
+    eprintln!(
+        "antigravity_real_local_brain_smoke: {} session refs, {} parsed sessions, {} parsed transcripts",
+        refs.len(),
+        parsed_sessions,
+        parsed_transcripts
+    );
+    assert!(parsed_sessions > 0);
+    assert_eq!(parsed_sessions, parsed_transcripts);
+}
+
 // ---------------------------------------------------------------- seq 契约
 
 /// 跨文件不变量 1:FTS 单元的 seq 必须能在详情页 mainline 中找到同号消息,
